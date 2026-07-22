@@ -59,7 +59,15 @@ public final class Highlight: Sendable {
             attributedText = AttributedString(stringLiteral: text)
         } else {
             let data = try htmlDataFromText(hljsResult.value, selectors: colors.css)
-            attributedText = try attributedTextFromData(data)
+            let converted = try attributedTextFromData(data)
+            if converted.characters.isEmpty && !text.isEmpty {
+                // The NSAttributedString HTML importer is unreliable off the main thread and
+                // can time out and produce an empty document. Fall back to plain text rather
+                // than returning an empty result for non-empty input.
+                attributedText = AttributedString(stringLiteral: text)
+            } else {
+                attributedText = converted
+            }
         }
         return HighlightResult(
             attributedText: attributedText,
@@ -91,6 +99,9 @@ public final class Highlight: Sendable {
             .font,
             range: NSMakeRange(0, mutableString.length)
         )
+        guard mutableString.length > 0 else {
+            return AttributedString()
+        }
         let range = NSRange(location: 0, length: mutableString.length - 1)
         let attributedString = mutableString.attributedSubstring(from: range)
 #if os(macOS)

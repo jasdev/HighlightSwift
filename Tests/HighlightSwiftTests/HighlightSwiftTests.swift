@@ -37,7 +37,22 @@ final class HighlightSwiftTests: XCTestCase {
         let attributedText = try await highlight.attributedText(swiftCode)
         XCTAssertEqual(attributedText.characters.count, 477)
     }
-    
+
+    func testEmptyText() async throws {
+        let attributedText = try await highlight.attributedText("", language: "swift")
+        XCTAssertEqual(String(attributedText.characters), "")
+    }
+
+    func testWhitespaceOnlyText() async throws {
+        // Whitespace-only input produces an empty document after the HTML importer trim,
+        // which previously crashed with an out-of-bounds attributedSubstring(from:) range.
+        // It now falls back to the plain input text.
+        for text in [" ", "\n", "  \n\t\n  "] {
+            let attributedText = try await highlight.attributedText(text, language: "swift")
+            XCTAssertEqual(String(attributedText.characters), text)
+        }
+    }
+
     func testSimpleUnsupported() async throws {
         let attributedText = try await highlight.attributedText(swiftCode, language: "fortran")
         XCTAssertEqual(attributedText.characters.count, 477)
