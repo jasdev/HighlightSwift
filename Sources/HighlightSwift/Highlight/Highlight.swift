@@ -42,6 +42,27 @@ public final class Highlight: Sendable {
         try await request(text, mode: .languageAlias(language), colors: colors).attributedText
     }
     
+    /// Syntax highlight some text and return highlight.js's raw HTML output.
+    ///
+    /// This skips the `NSAttributedString` HTML importer used by `attributedText` and `request`.
+    /// That importer is documented as main-thread-only and serializes there, which makes it the
+    /// dominant cost when highlighting many files: callers that build their own `AttributedString`
+    /// from the returned markup avoid it entirely.
+    ///
+    /// The result is standard highlight.js markup — nested `<span class="hljs-...">` elements with
+    /// `&`, `<`, `>`, `"` and `'` escaped as HTML entities.
+    ///
+    /// - Parameters:
+    ///   - text: The plain text code to highlight.
+    ///   - language: The language alias to use.
+    /// - Throws: Either a HighlightError or an Error.
+    /// - Returns: The highlighted HTML, or `nil` when highlight.js could not highlight the input
+    ///            (the caller should render the text unhighlighted).
+    public func highlightedHTML(_ text: String, language: String) async throws -> String? {
+        let result = try await hljs.highlight(text, mode: .languageAlias(language))
+        return result.value == "undefined" ? nil : result.value
+    }
+
     /// Syntax highlight some text and return detailed results.
     /// - Parameters:
     ///   - text: The plain text code to highlight.
